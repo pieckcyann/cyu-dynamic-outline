@@ -1,4 +1,4 @@
-import { debounce, MarkdownView, Notice, Plugin, Workspace } from "obsidian";
+import { debounce, Notice, Plugin } from "obsidian";
 import OutlineButton from "src/components/outlineButton";
 import OutlineStateManager from "src/components/outlineStateManager";
 import OutlineWindow from "src/components/outlineWindow";

@@ -9,15 +9,18 @@ export default class WindowLocationSetting extends DynamicOutlineSetting {
 
 		new Setting(this.containerEl)
 			.setName("Outline location")
-			.setDesc(
-				htmlDescription(
-					`Set the location for both the window and the button.`
-				)
-			)
+			// .setDesc(
+			// 	htmlDescription(
+			// 		`Set the location for both the window and the button.`
+			// 	)
+			// )
+			.setDesc(htmlDescription(`设置窗口和按钮的位置。`))
 			.addButton((button) => {
 				restartButton = button;
-				button.setButtonText("Reload plugin");
-				button.setTooltip("Requires a plugin reload to take effect.");
+				// button.setButtonText("Reload plugin");
+				// button.setTooltip("Requires a plugin reload to take effect.");
+				button.setButtonText("重新加载插件");
+				button.setTooltip("需要重新加载插件才能生效。");
 				button.setDisabled(true);
 				button.setClass("dynamic-outline-reload");
 				button.setCta();

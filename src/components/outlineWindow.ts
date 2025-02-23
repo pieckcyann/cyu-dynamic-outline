@@ -41,7 +41,9 @@ export default class OutlineWindow {
 	set pinned(value: boolean) {
 		this._pinned = value;
 
-		const button: OutlineButton = this._stateManager.getButtonInView(this._view);
+		const button: OutlineButton = this._stateManager.getButtonInView(
+			this._view
+		);
 		button.pinned = value;
 
 		if (this._plugin.settings.toggleOnHover && !value) {
@@ -110,7 +112,7 @@ export default class OutlineWindow {
 		const itemList: Array<HTMLElement> = this.getVisibleLiItems();
 		const itemListLength: number = itemList.length;
 
-		let currentIndex: number = getCurrentIndex();
+		const currentIndex: number = getCurrentIndex();
 		let newIndex = currentIndex;
 
 		switch (event.key) {
@@ -359,7 +361,7 @@ export default class OutlineWindow {
 		ulElement.empty();
 
 		if (this._plugin.settings.dynamicHeadingIndentation) {
-			let stack: Array<number> = [];
+			const stack: Array<number> = [];
 			headings?.forEach((heading) => {
 				while (
 					stack.length > 0 &&

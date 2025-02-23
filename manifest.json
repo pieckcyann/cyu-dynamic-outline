@@ -1,11 +1,11 @@
 {
-	"id": "dynamic-outline",
-	"name": "Dynamic Outline",
-	"version": "1.15.0",
+	"id": "cyu-dynamic-outline",
+	"name": "Cyu Dynamic Outline",
+	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Adds a customizable GitHub-like floating table of contents.",
 	"author": "theopavlove",
-	"authorUrl": "https://github.com/theopavlove",
+	"authorUrl": "https://github.com/pieckcyann/cyu-dynamic-outline",
 	"fundingUrl": "https://www.buymeacoffee.com/theopavlove",
 	"isDesktopOnly": false
 }

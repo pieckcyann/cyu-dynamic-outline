@@ -9,16 +9,20 @@ export default class HighlightOnScrollSetting extends DynamicOutlineSetting {
 			this.plugin.settings.highlightCurrentHeading;
 
 		new Setting(this.containerEl)
-			.setName("Highlight active heading")
-			.setDesc(
-				htmlDescription(
-					`Highlight current outline heading while scrolling down the file.`
-				)
-			)
+			// .setName("Highlight active heading")
+			// .setDesc(
+			// 	htmlDescription(
+			// 		`Highlight current outline heading while scrolling down the file.`
+			// 	)
+			// )
+			.setName("高亮当前标题")
+			.setDesc(htmlDescription(`在滚动文件时高亮当前大纲标题。`))
 			.addButton((button) => {
 				restartButton = button;
-				button.setButtonText("Reload plugin");
-				button.setTooltip("Requires a plugin reload to take effect.");
+				// button.setButtonText("Reload plugin");
+				// button.setTooltip("Requires a plugin reload to take effect.");
+				button.setButtonText("重新加载插件");
+				button.setTooltip("需要重新加载插件才能生效。");
 				button.setDisabled(true);
 				button.setClass("dynamic-outline-reload");
 				button.setCta();
