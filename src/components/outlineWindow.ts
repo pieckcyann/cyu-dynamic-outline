@@ -1,10 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import DynamicOutlinePlugin, { WINDOW_ID } from "main";
-import { HeadingCache, MarkdownView } from "obsidian";
+import { HeadingCache, MarkdownView, Notice } from "obsidian";
 import OutlineButton from "./outlineButton";
 import OutlineHeadings from "./outlineHeadings";
 import DynamicLiElement from "./outlineLiElement";
 import OutlineStateManager from "./outlineStateManager";
-import SearchContainer from "./searchContainer";
 import * as fuzzysort from "fuzzysort";
 
 export default class OutlineWindow {
@@ -23,7 +23,7 @@ export default class OutlineWindow {
 		this._view = view;
 		this._stateManager = OutlineStateManager.getInstance();
 		this._containerEl = this.createElement();
-		this._dynamicHeadings = new OutlineHeadings(this._plugin, this._view);
+		this._dynamicHeadings = new OutlineHeadings(this._plugin, this._view); // !
 
 		this.setupEventListeners();
 	}
@@ -52,20 +52,6 @@ export default class OutlineWindow {
 	}
 
 	private setupEventListeners() {
-		this._plugin.registerDomEvent(
-			this._containerEl.querySelector("input") as HTMLInputElement,
-			"input",
-			() => {
-				this.filterItems();
-			}
-		);
-		this._plugin.registerDomEvent(
-			this._containerEl.querySelector("input") as HTMLInputElement,
-			"keydown",
-			(event: KeyboardEvent) => {
-				this.handleKeyDown(event);
-			}
-		);
 		if (this._plugin.settings.toggleOnHover) {
 			this._plugin.registerDomEvent(this._containerEl, "mouseenter", () =>
 				this.handleMouseEnter()
@@ -218,11 +204,6 @@ export default class OutlineWindow {
 				id: "dynamic-outline",
 			},
 		});
-
-		const searchContainer: SearchContainer = new SearchContainer(
-			this._plugin
-		);
-		mainElement.appendChild(searchContainer.element);
 
 		const contentElement: HTMLDivElement = createEl("div", {
 			cls: "dynamic-outline-content-container",
@@ -402,14 +383,6 @@ export default class OutlineWindow {
 			this._view
 		);
 		button.active = true;
-
-		if (this._plugin.settings.autofocusSearchOnOpen) {
-			const inputField: HTMLInputElement | null =
-				this._containerEl.querySelector(
-					"input"
-				) as HTMLInputElement | null;
-			inputField?.focus();
-		}
 
 		if (this._plugin.settings.highlightCurrentHeading) {
 			this.highlightCurrentHeading(options?.scrollBlock);

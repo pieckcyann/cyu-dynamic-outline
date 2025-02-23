@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import DynamicOutlinePlugin, { BUTTON_CLASS, LUCID_ICON_NAME } from "main";
-import { MarkdownView, setIcon } from "obsidian";
+import { MarkdownView, Notice, setIcon } from "obsidian";
 import OutlineStateManager from "./outlineStateManager";
 import OutlineWindow from "./outlineWindow";
 

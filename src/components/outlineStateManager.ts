@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import DynamicOutlinePlugin from "main";
-import { HeadingCache, MarkdownView, Workspace } from "obsidian";
+import { HeadingCache, MarkdownView, Notice, Workspace } from "obsidian";
 import OutlineButton from "./outlineButton";
 import OutlineWindow from "./outlineWindow";
 
@@ -56,7 +57,7 @@ export default class OutlineStateManager {
 		if (!this._windows.has(key)) {
 			this._windows.set(key, new OutlineWindow(this._plugin, view));
 		}
-
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		const window: OutlineWindow = this._windows.get(key)!;
 		window.updateView(view);
 
@@ -70,7 +71,7 @@ export default class OutlineStateManager {
 		const window: OutlineWindow = this.getWindowInView(mdView);
 		const headings: HeadingCache[] = window.getHeadings();
 
-		let shouldShow: boolean =
+		const shouldShow: boolean =
 			headings &&
 			this.isEnoughWidth(mdView) &&
 			headings.length >= this._plugin.settings.minimumHeadings;

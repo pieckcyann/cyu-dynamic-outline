@@ -9,11 +9,9 @@ export { DEFAULT_SETTINGS, DynamicOutlineSettingTab };
 export type { DynamicOutlinePluginSettings };
 
 interface DynamicOutlinePluginSettings {
-	autofocusSearchOnOpen: boolean;
 	dynamicHeadingIndentation: boolean;
 	highlightCurrentHeading: boolean;
 	minimumHeadings: number;
-	resetSearchFieldOnHeadingClick: boolean;
 	toggleAutomatically: boolean;
 	contentOverlap: string;
 	toggleOnHover: boolean;
@@ -21,11 +19,9 @@ interface DynamicOutlinePluginSettings {
 }
 
 const DEFAULT_SETTINGS: DynamicOutlinePluginSettings = {
-	autofocusSearchOnOpen: true,
 	dynamicHeadingIndentation: true,
 	highlightCurrentHeading: true,
 	minimumHeadings: 1,
-	resetSearchFieldOnHeadingClick: true,
 	toggleAutomatically: false,
 	contentOverlap: "allow",
 	toggleOnHover: false,

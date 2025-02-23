@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import DynamicOutlinePlugin from "main";
 import { HeadingCache, MarkdownView } from "obsidian";
 import OutlineStateManager from "./outlineStateManager";
-import SearchContainer from "./searchContainer";
 
 export default class DynamicLiElement {
 	private _plugin: DynamicOutlinePlugin;
@@ -53,7 +53,7 @@ export default class DynamicLiElement {
 		this._setupEventListener(liElement, heading);
 	}
 
-	// TODO: the highlighted index should be on the top (scrollBlock="start")
+	// TODO: 高亮的索引应该位于顶部 (scrollBlock="start")
 	private _setupEventListener(
 		liElement: HTMLLIElement,
 		heading: HeadingCache
@@ -69,25 +69,7 @@ export default class DynamicLiElement {
 				this._view.currentMode.applyScroll(heading.position.start.line);
 			}, 0);
 
-			if (this._plugin.settings.resetSearchFieldOnHeadingClick) {
-				const window = this._stateManager.getWindowInView(this._view);
-				const searchContainerHTML: HTMLDivElement | null = window
-					.getContainerElement()
-					.querySelector(
-						".dynamic-outline-search-container"
-					) as HTMLDivElement | null;
-				if (!searchContainerHTML) return;
-
-				const searchContainer: SearchContainer = new SearchContainer(
-					this._plugin,
-					searchContainerHTML
-				);
-
-				searchContainer.clearInput(false);
-				window.removeHovered();
-			}
-
-			// Probably, should be a better option.
+			// 可能应该有一个更好的选项。
 			this._plugin.runCommand("editor:focus");
 		};
 
