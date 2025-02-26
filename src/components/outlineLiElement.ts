@@ -1,49 +1,76 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import DynamicOutlinePlugin from "main";
-import { HeadingCache, MarkdownView } from "obsidian";
+import { HeadingCache, MarkdownView, Notice } from "obsidian";
 import OutlineStateManager from "./outlineStateManager";
+import {
+	TREE_ITEM,
+	TREE_ITEM_COLLAPSED,
+	TREE_ITEM_CHILDREN,
+	TREE_ITEM_SELF,
+	TreeItem,
+} from "src/constant/classNames";
 
 export default class DynamicLiElement {
 	private _plugin: DynamicOutlinePlugin;
 	private _view: MarkdownView;
-	private _stateManager: OutlineStateManager;
+	// private _stateManager: OutlineStateManager;
 
 	constructor(plugin: DynamicOutlinePlugin, view: MarkdownView) {
 		this._plugin = plugin;
 		this._view = view;
-		this._stateManager = OutlineStateManager.getInstance();
+		// this._stateManager = OutlineStateManager.getInstance();
 	}
 
-	public createLiElement(
-		heading: HeadingCache,
-		tab_level: number = heading.level
-	): HTMLLIElement {
-		const tab_size: number =
-			this._plugin.getCssVariableAsNumber("--dynamic-outline-tab-size") ??
-			24;
+	public createItemElement(headings: HeadingCache[]): HTMLDivElement | null {
+		const root = this.createTreeItem(headings[0]).root;
+		// const children = this.createTreeItem(headings[0]).children;
+		const children = root.querySelector(`.${TREE_ITEM_CHILDREN}`);
+		// let curRoot: HTMLDivElement | null = null; // 用来追踪当前的嵌套
 
-		const liElement: HTMLLIElement = createEl("li", {
+		this._setupEventListener(root, headings[0]);
+
+		headings.forEach((heading, index) => {
+			if (index === 0) return;
+			const child = this.createTreeItem(heading);
+			children?.append(child.root);
+		});
+
+		return root;
+	}
+
+	public createTreeItem(heading: HeadingCache): TreeItem {
+		const treeItem = createEl("div", {
+			cls: [TREE_ITEM, `heading-${heading.level}`],
 			attr: {
 				"data-heading-line": heading.position.start.line,
-				style: `padding-left: ${
-					(tab_level - 1) * tab_size
-				}px !important`,
 			},
 		});
 
-		const aElement = createEl("a", {
-			cls: `heading-level-${heading.level}`,
+		const treeItemSelf = createEl("div", {
+			cls: [
+				TREE_ITEM_SELF,
+				TREE_ITEM_COLLAPSED,
+				`heading-${heading.level}`,
+			],
 			text: heading.heading,
 		});
-		liElement.append(aElement);
 
-		this._setupEventListener(liElement, heading);
+		const treeItemChildren = createEl("div", {
+			cls: TREE_ITEM_CHILDREN,
+		});
 
-		return liElement;
+		treeItem.append(treeItemSelf);
+		treeItem.append(treeItemChildren);
+
+		return {
+			root: treeItem,
+			self: treeItemSelf,
+			children: treeItemChildren,
+		};
 	}
 
 	public updateLiElementLine(
-		liElement: HTMLLIElement,
+		liElement: HTMLDivElement,
 		heading: HeadingCache
 	): void {
 		liElement.setAttribute(
@@ -53,12 +80,12 @@ export default class DynamicLiElement {
 		this._setupEventListener(liElement, heading);
 	}
 
-	// TODO: 高亮的索引应该位于顶部 (scrollBlock="start")
+	// TODO: the highlighted index should be on the top (scrollBlock="start")
 	private _setupEventListener(
-		liElement: HTMLLIElement,
+		itemSelf: HTMLDivElement,
 		heading: HeadingCache
 	) {
-		liElement.onclick = () => {
+		itemSelf.onclick = () => {
 			if (!this._view.file) return;
 
 			this._view.leaf.openFile(this._view.file, {
@@ -72,13 +99,5 @@ export default class DynamicLiElement {
 			// 可能应该有一个更好的选项。
 			this._plugin.runCommand("editor:focus");
 		};
-
-		liElement.addEventListener("mouseenter", () => {
-			liElement.classList.add("hovered");
-		});
-
-		liElement.addEventListener("mouseleave", () => {
-			liElement.classList.remove("hovered");
-		});
 	}
 }

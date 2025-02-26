@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import DynamicOutlinePlugin, { WINDOW_ID } from "main";
 import { HeadingCache, MarkdownView, Notice } from "obsidian";
-import OutlineButton from "./outlineButton";
 import OutlineHeadings from "./outlineHeadings";
 import DynamicLiElement from "./outlineLiElement";
 import OutlineStateManager from "./outlineStateManager";
 import * as fuzzysort from "fuzzysort";
+import { TREE_ITEM, TREE_ITEM_SELF } from "src/constant/classNames";
 
 export default class OutlineWindow {
 	public static hideTimeout: NodeJS.Timeout | null = null;
@@ -18,14 +18,16 @@ export default class OutlineWindow {
 	private _latestHeadings: HeadingCache[] = [];
 	private _pinned = false;
 
-	constructor(plugin: DynamicOutlinePlugin, view: MarkdownView) {
+	constructor(plugin: DynamicOutlinePlugin) {
 		this._plugin = plugin;
-		this._view = view;
+		// this._view = view;
 		this._stateManager = OutlineStateManager.getInstance();
 		this._containerEl = this.createElement();
 		this._dynamicHeadings = new OutlineHeadings(this._plugin, this._view); // !
 
 		this.setupEventListeners();
+
+		// this._plugin.app.workspace.onLayoutReady(() => {});
 	}
 
 	get visible(): boolean {
@@ -41,133 +43,42 @@ export default class OutlineWindow {
 	set pinned(value: boolean) {
 		this._pinned = value;
 
-		const button: OutlineButton = this._stateManager.getButtonInView(
-			this._view
-		);
-		button.pinned = value;
-
-		if (this._plugin.settings.toggleOnHover && !value) {
+		if (!value) {
 			this.hide();
 		}
 	}
 
-	private setupEventListeners() {
-		if (this._plugin.settings.toggleOnHover) {
-			this._plugin.registerDomEvent(this._containerEl, "mouseenter", () =>
-				this.handleMouseEnter()
-			);
-			this._plugin.registerDomEvent(this._containerEl, "mouseleave", () =>
-				this.handleMouseLeave()
-			);
+	toggleShow(): void {
+		const window = this._stateManager.getWindowInView(this._view);
+
+		if (window.visible) {
+			window.hide();
+		} else {
+			window.show({
+				scrollBlock: "start",
+			});
+			window.pinned = true;
 		}
+	}
+
+	private setupEventListeners() {
+		// if (this._plugin.settings.toggleOnHover) {
+		this._plugin.registerDomEvent(this._containerEl, "mouseenter", () =>
+			this.handleMouseEnter()
+		);
+		this._plugin.registerDomEvent(this._containerEl, "mouseleave", () =>
+			this.handleMouseLeave()
+		);
+		// }
 	}
 
 	private getVisibleLiItems(): Array<HTMLElement> {
 		return Array.from(
-			this._containerEl.querySelectorAll("li:not(.outline-item-hidden")
+			// this._containerEl.querySelectorAll("li:not(.outline-item-hidden")
+			this._containerEl.querySelectorAll(
+				`.${TREE_ITEM_SELF}:not(.outline-item-hidden)`
+			)
 		);
-	}
-
-	private setHovered(itemList: Array<HTMLElement>, newIndex: number): void {
-		itemList.forEach((item, index) => {
-			item.classList.toggle("hovered", index === newIndex);
-		});
-	}
-
-	private handleKeyDown(event: KeyboardEvent): void {
-		/**
-		 * Retrieves the current index of the item in the list.
-		 *
-		 * The current index is determined by the item that is either hovered or highlighted.
-		 * If no item is hovered, the method looks for the highlighted item.
-		 * If neither an hovered nor a highlighted item is found, the method returns 0.
-		 *
-		 * @returns {number} The index of the current item in the list.
-		 */
-		const getCurrentIndex = () => {
-			const hoveredIndex = itemList.findIndex((item) =>
-				item.classList.contains("hovered")
-			);
-			return hoveredIndex !== -1
-				? hoveredIndex
-				: itemList.findIndex((item) =>
-						item.classList.contains("highlight")
-				  ) || 0;
-		};
-
-		const itemList: Array<HTMLElement> = this.getVisibleLiItems();
-		const itemListLength: number = itemList.length;
-
-		const currentIndex: number = getCurrentIndex();
-		let newIndex = currentIndex;
-
-		switch (event.key) {
-			case "ArrowDown":
-			case "Tab":
-				event.preventDefault();
-				newIndex = event.shiftKey
-					? (currentIndex + itemListLength - 1) % itemListLength
-					: (currentIndex + 1) % itemListLength;
-				break;
-			case "ArrowUp":
-				event.preventDefault();
-				newIndex = (currentIndex + itemListLength - 1) % itemListLength;
-				break;
-			case "Enter":
-				event.preventDefault();
-				if (currentIndex >= 0) {
-					const selectedOutlineItem: HTMLLIElement = itemList[
-						currentIndex
-					] as HTMLLIElement;
-					selectedOutlineItem.click();
-				}
-				break;
-			case "Escape":
-				event.preventDefault();
-				this.hide();
-				// this.removeHovered();
-				break;
-		}
-
-		if (newIndex !== currentIndex) {
-			this.setHovered(itemList, newIndex);
-			itemList[newIndex].scrollIntoView({
-				block: "nearest",
-			});
-		}
-	}
-
-	private filterItems(): void {
-		// TODO: should be a better way to target the input field
-		// considering we already have a dedicated class
-		const inputField: HTMLInputElement = this._containerEl.querySelector(
-			"input"
-		) as HTMLInputElement;
-		const value: string = inputField.value.toLowerCase();
-		const outlineItems: NodeListOf<HTMLLIElement> =
-			this._containerEl.querySelectorAll("li");
-
-		let filteredItems: HTMLLIElement[];
-		if (value === "") {
-			filteredItems = Array.from(outlineItems);
-		} else {
-			filteredItems = fuzzysort
-				.go(value, Array.from(outlineItems), {
-					key: "textContent",
-				})
-				.map((result) => result.obj);
-		}
-
-		outlineItems.forEach((item: HTMLLIElement) => {
-			item.classList.toggle(
-				"outline-item-hidden",
-				!filteredItems.includes(item)
-			);
-		});
-
-		// Set the current index to the first visible item
-		const itemList: Array<HTMLElement> = this.getVisibleLiItems();
-		this.setHovered(itemList, 0);
 	}
 
 	private handleMouseEnter(): void {
@@ -180,7 +91,7 @@ export default class OutlineWindow {
 	}
 
 	private handleMouseLeave(): void {
-		if (this._plugin.settings.toggleOnHover && !this.pinned) {
+		if (!this.pinned) {
 			OutlineWindow.hideTimeout = setTimeout(() => {
 				this.hide();
 			}, 100);
@@ -208,7 +119,7 @@ export default class OutlineWindow {
 		const contentElement: HTMLDivElement = createEl("div", {
 			cls: "dynamic-outline-content-container",
 		});
-		contentElement.createEl("ul", {});
+		contentElement.createEl("div", { cls: TREE_ITEM });
 		mainElement.appendChild(contentElement);
 
 		return mainElement;
@@ -249,19 +160,25 @@ export default class OutlineWindow {
 			headings: HeadingCache[],
 			targetLine: number
 		): number => {
-			let closestIndex = 0;
+			let closestIndex = 0; // 默认值为-1，表示未找到合适的标题
 			let low = 0;
 			let high = headings.length - 1;
+
+			// 使用二分查找来找到第一个比目标行号小的标题
 			while (low <= high) {
 				const mid = Math.floor((low + high) / 2);
 				const midLine = headings[mid].position.start.line;
-				if (midLine <= targetLine) {
-					closestIndex = mid;
-					low = mid + 1;
+
+				// 如果当前标题的行号小于目标行号，更新closestIndex并继续查找右侧区域
+				if (midLine < targetLine) {
+					closestIndex = mid; // 记录当前标题的索引
+					low = mid + 1; // 继续在右半部分查找
 				} else {
-					high = mid - 1;
+					high = mid - 1; // 在左半部分查找
 				}
 			}
+
+			// 返回第一个比目标行号小的标题索引
 			return closestIndex;
 		};
 
@@ -269,26 +186,60 @@ export default class OutlineWindow {
 			this._view.currentMode.getScroll();
 
 		// TODO: Should cache it and not call every time. (?)
-		const headings: HeadingCache[] = this.getHeadings();
+		const headings = this.getHeadings();
+		const twoHeadings: HeadingCache[] = headings.filter(
+			(h) => h.level === 2
+		);
 
-		if (headings.length == 0) {
-			return;
-		}
+		if (twoHeadings.length == 0) return;
 
-		const closestIndex: number = binarySearchClosestHeading(
-			headings,
-			currentScrollPosition + 1
+		const closestIndex2: number = binarySearchClosestHeading(
+			twoHeadings,
+			currentScrollPosition + 2.5
 		);
 
 		// TODO: Should cache this thing and not call it every time. (?)
-		const allHeadingElements = this._containerEl.querySelectorAll("li");
-		allHeadingElements.forEach((element, index) =>
-			element.classList.toggle("highlight", index === closestIndex)
+		const allH2Elements = this._containerEl.findAll(
+			`.${TREE_ITEM_SELF}.heading-2`
+		);
+
+		allH2Elements.forEach((h2, index) =>
+			h2.classList.toggle("highlight", index === closestIndex2)
+		);
+
+		// 将 headings 分组
+		const threeHeadings: HeadingCache[] = [];
+
+		for (let i = closestIndex2 + 1; i < headings.length; i++) {
+			const heading = headings[i];
+			if (heading.level === 3) {
+				threeHeadings.push(heading);
+			} else break;
+		}
+
+		console.debug(threeHeadings);
+
+		const closestIndex3: number = binarySearchClosestHeading(
+			threeHeadings,
+			currentScrollPosition
+		);
+
+		const allH3Elements = this._containerEl.findAll(
+			`.${TREE_ITEM_SELF}.heading-3`
+		);
+
+		allH3Elements.forEach((h3, index) =>
+			h3.classList.toggle(
+				"highlight",
+				index + closestIndex2 === closestIndex3
+			)
 		);
 
 		// Check if there is a highlighted heading, and scroll to it
-		const element: HTMLElement | null =
-			this._containerEl.querySelector("li.highlight");
+		// 检查是否有突出显示的标题，并滚动到它
+		const element: HTMLElement | null = this._containerEl.querySelector(
+			`.${TREE_ITEM_SELF}.highlight`
+		);
 		element?.scrollIntoView({
 			behavior: "instant" as ScrollBehavior,
 			block: scrollBlock,
@@ -315,9 +266,8 @@ export default class OutlineWindow {
 		};
 
 		// It should always be present as the .containerEl is always created (is it?).
-		const ulElement: HTMLUListElement | null =
-			this._containerEl.querySelector("ul");
-		if (!ulElement) return;
+		const treeItemRoot: HTMLDivElement | null = this._containerEl;
+		if (!treeItemRoot) return;
 
 		const dynamicLi: DynamicLiElement = new DynamicLiElement(
 			this._plugin,
@@ -327,48 +277,54 @@ export default class OutlineWindow {
 
 		// Check if the headings are the same as before and, if so,
 		// update only the positions of the li elements.
+		// 检查标题是否与之前相同，如果是，
+		// 仅更新 li 元素的位置。
 		if (
 			headings.length > 0 &&
 			arraysAreEqual(headings, this._latestHeadings)
 		) {
-			const currentLi = ulElement.querySelectorAll("li");
-			currentLi.forEach((liElement, index) => {
+			const currentLi = treeItemRoot.querySelectorAll(
+				`.${TREE_ITEM_SELF}`
+			);
+			currentLi.forEach((liElement: HTMLDivElement, index) => {
 				dynamicLi.updateLiElementLine(liElement, headings[index]);
 			});
 			return;
 		}
 
 		this._latestHeadings = headings;
-		ulElement.empty();
+		treeItemRoot.empty();
 
-		if (this._plugin.settings.dynamicHeadingIndentation) {
-			const stack: Array<number> = [];
-			headings?.forEach((heading) => {
-				while (
-					stack.length > 0 &&
-					heading.level <= stack[stack.length - 1]
-				) {
-					stack.pop();
-				}
-				stack.push(heading.level);
+		// 将 headings 分组
+		const groupedHeadings: HeadingCache[][] = [];
+		let currentGroup: HeadingCache[] = [];
 
-				const liElement: HTMLLIElement = dynamicLi.createLiElement(
-					heading,
-					stack.length
-				);
-				ulElement.append(liElement);
-			});
-		} else {
-			headings?.forEach((heading) => {
-				const liElement: HTMLLIElement =
-					dynamicLi.createLiElement(heading);
-				ulElement.append(liElement);
-			});
-		}
+		headings.forEach((heading) => {
+			if (heading.level === 2) {
+				if (currentGroup.length) groupedHeadings.push(currentGroup);
+				currentGroup = [heading];
+			} else {
+				currentGroup.push(heading);
+			}
+		});
 
-		if (this._plugin.settings.highlightCurrentHeading) {
-			this.highlightCurrentHeading();
-		}
+		if (currentGroup.length) groupedHeadings.push(currentGroup);
+
+		groupedHeadings.forEach((headings) => {
+			const liElement = dynamicLi.createItemElement(headings);
+			if (!liElement) return;
+			treeItemRoot.append(liElement);
+		});
+
+		// new Notice(`${treeItemRoot.outerHTML}`);
+
+		this.highlightCurrentHeading();
+
+		const window = this._stateManager.getWindowInView(this._view);
+		window.show({
+			scrollBlock: "start",
+		});
+		window.pinned = true;
 	}
 
 	show(options?: { scrollBlock?: ScrollLogicalPosition }): void {
@@ -379,14 +335,7 @@ export default class OutlineWindow {
 		this.update();
 		this._view.contentEl.append(this._containerEl);
 
-		const button: OutlineButton = this._stateManager.getButtonInView(
-			this._view
-		);
-		button.active = true;
-
-		if (this._plugin.settings.highlightCurrentHeading) {
-			this.highlightCurrentHeading(options?.scrollBlock);
-		}
+		this.highlightCurrentHeading(options?.scrollBlock);
 	}
 
 	// TODO: should trigger clearInput() for the search field
@@ -399,19 +348,13 @@ export default class OutlineWindow {
 		// Remove the "hovered" effect on each heading.
 		this.removeHovered();
 
-		// Turn off the button.
-		const button: OutlineButton = this._stateManager.getButtonInView(
-			this._view
-		);
-		button.active = false;
-
 		// Call "Focus on last note" Obsidian built-in method
 		this._plugin.runCommand("editor:focus");
 
 		// Remove optional pinning.
-		if (this._plugin.settings.toggleOnHover) {
-			this.pinned = false;
-		}
+		// if (this._plugin.settings.toggleOnHover) {
+		this.pinned = false;
+		// }
 	}
 
 	toggle(): void {

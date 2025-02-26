@@ -1,13 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import DynamicOutlinePlugin from "main";
 import { HeadingCache, MarkdownView, Notice, Workspace } from "obsidian";
-import OutlineButton from "./outlineButton";
 import OutlineWindow from "./outlineWindow";
 
 export default class OutlineStateManager {
 	private static instance: OutlineStateManager;
 	private _windows: Map<string, OutlineWindow> = new Map();
-	private _buttons: Map<string, OutlineButton> = new Map();
 	private _plugin: DynamicOutlinePlugin;
 
 	private constructor(plugin: DynamicOutlinePlugin) {
@@ -33,56 +31,16 @@ export default class OutlineStateManager {
 		return workspace.getActiveViewOfType(MarkdownView);
 	}
 
-	getOpenMDViews(): MarkdownView[] {
-		const workspace: Workspace = this._plugin.app.workspace;
-		return workspace
-			.getLeavesOfType("markdown")
-			.map((leaf) => leaf.view as MarkdownView);
-	}
-
-	getButtonInView(view: MarkdownView): OutlineButton {
-		const key = this.getKey(view);
-		if (!this._buttons.has(key)) {
-			this._buttons.set(key, new OutlineButton(this._plugin));
-		}
-
-		const button: OutlineButton = this._buttons.get(key)!;
-		button.updateView(view);
-
-		return button;
-	}
-
 	getWindowInView(view: MarkdownView): OutlineWindow {
 		const key = this.getKey(view);
 		if (!this._windows.has(key)) {
-			this._windows.set(key, new OutlineWindow(this._plugin, view));
+			this._windows.set(key, new OutlineWindow(this._plugin));
 		}
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		const window: OutlineWindow = this._windows.get(key)!;
 		window.updateView(view);
 
 		return window;
-	}
-
-	handleFileOpen(): void {
-		const mdView: MarkdownView | null = this.getActiveMDView();
-		if (!mdView) return;
-
-		const window: OutlineWindow = this.getWindowInView(mdView);
-		const headings: HeadingCache[] = window.getHeadings();
-
-		const shouldShow: boolean =
-			headings &&
-			this.isEnoughWidth(mdView) &&
-			headings.length >= this._plugin.settings.minimumHeadings;
-
-		if (window.visible && !shouldShow) {
-			if (this._plugin.settings.toggleOnHover) window.pinned = false;
-			window.hide();
-		} else if (!window.visible && shouldShow) {
-			setTimeout(() => window.show(), 50);
-			if (this._plugin.settings.toggleOnHover) window.pinned = true;
-		}
 	}
 
 	handleMetadataChanged(): void {
@@ -93,28 +51,9 @@ export default class OutlineStateManager {
 		window.update();
 	}
 
-	createButtonsInOpenViews(): void {
-		this.getOpenMDViews().forEach((view) => {
-			// When the Obsidian is initially loaded, some active leaves do not have
-			// any HTML content yet. But when we initialize the button, we pass
-			// the current view as it is (and it is not updated in the future).
-			// So, we should check that our view is fully loaded (so that we could
-			// later get the View Action Buttons) in order to avoid
-			// false button initialization.
-
-			// @ts-ignore:2339
-			if (view.leaf.width === 0) return;
-
-			const button = this.getButtonInView(view);
-			if (!button.visible) button.show();
-		});
-	}
-
 	removeAll(): void {
 		this._windows.forEach((window) => window.hide());
-		this._buttons.forEach((button) => button.hide());
 		this._windows.clear();
-		this._buttons.clear();
 	}
 
 	// Considering the fact that the views that are passed to the button
@@ -124,26 +63,5 @@ export default class OutlineStateManager {
 		// @ts-ignore:2239
 		// The `id` property actually exists in leaves.
 		return view.leaf.id;
-	}
-
-	private isEnoughWidth(mdView: MarkdownView): boolean {
-		if (this._plugin.settings.contentOverlap === "allow") {
-			return true;
-		}
-
-		const mdViewWidth: number = mdView.contentEl.innerWidth;
-		const windowWidth: number =
-			this._plugin.getCssVariableAsNumber(
-				"--dynamic-outline-window-width"
-			) ?? 256;
-
-		switch (this._plugin.settings.contentOverlap) {
-			case "partial":
-				return mdViewWidth - 700 >= windowWidth;
-			case "prevent":
-				return (mdViewWidth - 700) / 2 >= windowWidth;
-			default:
-				return true;
-		}
 	}
 }
