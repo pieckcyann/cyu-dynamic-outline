@@ -8,6 +8,9 @@ import {
 	TREE_ITEM_CHILDREN,
 	TREE_ITEM_SELF,
 	TreeItem,
+	TREE_ITEM_COLLAPSED_ICON,
+	TREE_ITEM_ICON,
+	TREE_ITEM_SELF_INNER,
 } from "src/constant/classNames";
 
 export default class DynamicLiElement {
@@ -23,11 +26,14 @@ export default class DynamicLiElement {
 
 	public createItemElement(headings: HeadingCache[]): HTMLDivElement | null {
 		const root = this.createTreeItem(headings[0]).root;
+		const self = root.querySelector(`.${TREE_ITEM_SELF}`) as HTMLDivElement;
+		const children = root.querySelector(
+			`.${TREE_ITEM_CHILDREN}`
+		) as HTMLDivElement;
 		// const children = this.createTreeItem(headings[0]).children;
-		const children = root.querySelector(`.${TREE_ITEM_CHILDREN}`);
 		// let curRoot: HTMLDivElement | null = null; // 用来追踪当前的嵌套
 
-		this._setupEventListener(root, headings[0]);
+		this._setupEventListener(self, headings[0]);
 
 		headings.forEach((heading, index) => {
 			if (index === 0) return;
@@ -35,10 +41,32 @@ export default class DynamicLiElement {
 			children?.append(child.root);
 		});
 
+		if (children.innerHTML) {
+			const icon = createEl("div", {
+				cls: [TREE_ITEM_ICON, TREE_ITEM_COLLAPSED_ICON],
+			});
+			const svgString =
+				'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg>';
+			icon.insertAdjacentHTML("afterbegin", svgString);
+			self.prepend(icon);
+		}
+
 		return root;
 	}
 
 	public createTreeItem(heading: HeadingCache): TreeItem {
+		const extractLinkText = (inputHeading: string) => {
+			return (
+				inputHeading
+					// Extract markdown link [text](link) text
+					.replace(/\[([^\]]+)\]\(.*?\)/g, "$1")
+					// Extract wikilink [[link|text]] text
+					.replace(/\[\[([^\]]+)\|([^\]]+)\]\]/g, "$2")
+					// Extact another wikilink [[text]] text
+					.replace(/\[\[([^\]]+)\]\]/g, "$1")
+			);
+		};
+
 		const treeItem = createEl("div", {
 			cls: [TREE_ITEM, `heading-${heading.level}`],
 			attr: {
@@ -46,14 +74,38 @@ export default class DynamicLiElement {
 			},
 		});
 
+		const TreeItemSelfInner = createEl("div", {
+			cls: TREE_ITEM_SELF_INNER,
+			text: extractLinkText(heading.heading),
+		});
+
+		// 检测当前标题是否是外/内链
+		const internal_link_class = /\[\[([^\]]+)\]\]/.test(heading.heading)
+			? "inner-internal-link"
+			: "";
+
+		const external_link_class = /\[([^\]]+)\]\(.*?\)/.test(heading.heading)
+			? "inner-external-link"
+			: "";
+
 		const treeItemSelf = createEl("div", {
 			cls: [
 				TREE_ITEM_SELF,
 				TREE_ITEM_COLLAPSED,
 				`heading-${heading.level}`,
+				internal_link_class,
+				external_link_class,
 			],
-			text: heading.heading,
 		});
+
+		treeItemSelf.append(TreeItemSelfInner);
+
+		if (external_link_class) {
+			const treeItemLinkIcon = createEl("div", {
+				cls: external_link_class,
+			});
+			treeItemSelf.append(treeItemLinkIcon);
+		}
 
 		const treeItemChildren = createEl("div", {
 			cls: TREE_ITEM_CHILDREN,

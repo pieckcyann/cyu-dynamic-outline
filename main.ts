@@ -30,7 +30,7 @@ export default class DynamicOutlinePlugin extends Plugin {
 				window.highlightCurrentHeading();
 			}
 		}
-	}, 0);
+	}, 100);
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -49,15 +49,6 @@ export default class DynamicOutlinePlugin extends Plugin {
 				this.stateManager.handleMetadataChanged();
 			})
 		);
-
-		// this.app.workspace.onLayoutReady(() => {
-		// 	const mdView = this.stateManager.getActiveMDView();
-		// 	if (mdView) {
-		// 		const window: OutlineWindow =
-		// 			this.stateManager.getWindowInView(mdView);
-		// 		window.toggleShow();
-		// 	}
-		// });
 
 		activeWindow.document.addEventListener(
 			"scroll",

@@ -5,7 +5,13 @@ import OutlineHeadings from "./outlineHeadings";
 import DynamicLiElement from "./outlineLiElement";
 import OutlineStateManager from "./outlineStateManager";
 import * as fuzzysort from "fuzzysort";
-import { TREE_ITEM, TREE_ITEM_SELF } from "src/constant/classNames";
+import {
+	TREE_ITEM,
+	TREE_ITEM_CHILDREN,
+	TREE_ITEM_COLLAPSED_ICON,
+	TREE_ITEM_ICON,
+	TREE_ITEM_SELF,
+} from "src/constant/classNames";
 
 export default class OutlineWindow {
 	public static hideTimeout: NodeJS.Timeout | null = null;
@@ -182,58 +188,98 @@ export default class OutlineWindow {
 			return closestIndex;
 		};
 
+		// 先删除
+		this._containerEl.findAll(".highlight").map((h) => {
+			h.classList.remove("highlight");
+		});
+
+		const scrollOffset = 5;
+
 		const currentScrollPosition: number =
 			this._view.currentMode.getScroll();
 
 		// TODO: Should cache it and not call every time. (?)
 		const headings = this.getHeadings();
+
+		const oneHeadings: HeadingCache[] = headings.filter(
+			(h) => h.level === 1
+		);
+
+		const closestIndex1: number = binarySearchClosestHeading(
+			oneHeadings,
+			currentScrollPosition + scrollOffset
+		);
+
+		const allH1Elements = this._containerEl.findAll(
+			`.${TREE_ITEM_SELF}.heading-1`
+		);
+
+		allH1Elements.forEach((h1, index) => {
+			h1.classList.toggle("highlight", index === closestIndex1);
+		});
+
 		const twoHeadings: HeadingCache[] = headings.filter(
 			(h) => h.level === 2
 		);
 
-		if (twoHeadings.length == 0) return;
-
 		const closestIndex2: number = binarySearchClosestHeading(
 			twoHeadings,
-			currentScrollPosition + 2.5
+			currentScrollPosition + scrollOffset
 		);
 
 		// TODO: Should cache this thing and not call it every time. (?)
-		const allH2Elements = this._containerEl.findAll(
+		const h2Roots = this._containerEl.findAll(`.${TREE_ITEM}.heading-2`);
+		const h2Selfs = this._containerEl.findAll(
 			`.${TREE_ITEM_SELF}.heading-2`
 		);
-
-		allH2Elements.forEach((h2, index) =>
-			h2.classList.toggle("highlight", index === closestIndex2)
+		const h2Children = h2Roots[closestIndex2].find(
+			`.${TREE_ITEM_CHILDREN}`
 		);
+
+		h2Selfs.forEach((h2, index) => {
+			h2.classList.toggle("highlight", index === closestIndex2);
+		});
 
 		// 将 headings 分组
 		const threeHeadings: HeadingCache[] = [];
+		let h2Count = 0;
+		let h3start = false;
 
-		for (let i = closestIndex2 + 1; i < headings.length; i++) {
+		for (let i = 0; i < headings.length; i++) {
 			const heading = headings[i];
-			if (heading.level === 3) {
-				threeHeadings.push(heading);
-			} else break;
-		}
 
-		console.debug(threeHeadings);
+			// 发现目标 H2
+			if (heading.level === 2) {
+				h2Count++;
+				if (h2Count - 1 === closestIndex2) {
+					h3start = true; // 开始收集 h3
+					continue;
+				}
+				if (h3start) break; // 碰到新的 H2，停止收集
+			}
+
+			// 只收集 H3，遇到其他层级停止
+			if (h3start) {
+				if (heading.level === 3) {
+					threeHeadings.push(heading);
+				} else {
+					break;
+				}
+			}
+		}
 
 		const closestIndex3: number = binarySearchClosestHeading(
 			threeHeadings,
-			currentScrollPosition
+			currentScrollPosition + scrollOffset
 		);
 
-		const allH3Elements = this._containerEl.findAll(
+		const allH3Elements = h2Children.findAll(
 			`.${TREE_ITEM_SELF}.heading-3`
 		);
 
-		allH3Elements.forEach((h3, index) =>
-			h3.classList.toggle(
-				"highlight",
-				index + closestIndex2 === closestIndex3
-			)
-		);
+		allH3Elements.forEach((h3, index) => {
+			h3.classList.toggle("highlight", index === closestIndex3);
+		});
 
 		// Check if there is a highlighted heading, and scroll to it
 		// 检查是否有突出显示的标题，并滚动到它
@@ -266,7 +312,9 @@ export default class OutlineWindow {
 		};
 
 		// It should always be present as the .containerEl is always created (is it?).
-		const treeItemRoot: HTMLDivElement | null = this._containerEl;
+		const treeItemRoot: HTMLDivElement | null = this._containerEl.find(
+			".dynamic-outline-content-container"
+		) as HTMLDivElement;
 		if (!treeItemRoot) return;
 
 		const dynamicLi: DynamicLiElement = new DynamicLiElement(
@@ -299,24 +347,90 @@ export default class OutlineWindow {
 		const groupedHeadings: HeadingCache[][] = [];
 		let currentGroup: HeadingCache[] = [];
 
+		let isHasH1Heading = false;
+
 		headings.forEach((heading) => {
+			if (heading.level === 1) {
+				// 遇到 H1，先把之前的 currentGroup 存起来（如果有内容的话）
+				if (currentGroup.length) {
+					groupedHeadings.push(currentGroup);
+				}
+
+				// H1 独立成一组
+				groupedHeadings.push([heading]);
+
+				// 清空 currentGroup，防止 H1 误入后续 H2-H6 的组
+				currentGroup = [];
+
+				isHasH1Heading = true;
+				return;
+			}
+
 			if (heading.level === 2) {
+				// 遇到新的 H2，把之前的 currentGroup 存进去（如果有内容的话）
 				if (currentGroup.length) groupedHeadings.push(currentGroup);
+
+				// 重新创建 H2 组
 				currentGroup = [heading];
 			} else {
 				currentGroup.push(heading);
 			}
 		});
 
+		// 确保最后的 currentGroup 被加入
 		if (currentGroup.length) groupedHeadings.push(currentGroup);
 
-		groupedHeadings.forEach((headings) => {
-			const liElement = dynamicLi.createItemElement(headings);
-			if (!liElement) return;
-			treeItemRoot.append(liElement);
-		});
+		let lastH1Element: HTMLDivElement | null;
+		let currH1Element: HTMLDivElement | null;
 
-		// new Notice(`${treeItemRoot.outerHTML}`);
+		if (isHasH1Heading) {
+			groupedHeadings.forEach((headings) => {
+				if (headings[0].level === 1) {
+					// 创建新的 H1 容器，并存储
+					currH1Element = dynamicLi.createTreeItem(headings[0]).root;
+					treeItemRoot.append(currH1Element);
+				}
+
+				if (lastH1Element != currH1Element) {
+					lastH1Element = currH1Element;
+				}
+
+				if (headings[0].level === 2 && currH1Element) {
+					const h2Element = dynamicLi.createItemElement(headings);
+					if (!h2Element) return;
+
+					const self = currH1Element?.querySelector(
+						`.${TREE_ITEM_SELF}`
+					);
+
+					const children = currH1Element?.querySelector(
+						`.${TREE_ITEM_CHILDREN}`
+					);
+					if (!children || !self) return;
+
+					children.append(h2Element);
+
+					if (
+						children.innerHTML &&
+						!self.find(`.${TREE_ITEM_ICON}`)
+					) {
+						const icon = createEl("div", {
+							cls: [TREE_ITEM_ICON, TREE_ITEM_COLLAPSED_ICON],
+						});
+						const svgString =
+							'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg>';
+						icon.insertAdjacentHTML("afterbegin", svgString);
+						self.prepend(icon);
+					}
+				}
+			});
+		} else {
+			groupedHeadings.forEach((headings) => {
+				const h2Element = dynamicLi.createItemElement(headings);
+				if (!h2Element) return;
+				treeItemRoot.append(h2Element);
+			});
+		}
 
 		this.highlightCurrentHeading();
 

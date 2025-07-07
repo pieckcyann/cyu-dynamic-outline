@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import DynamicOutlinePlugin from "main";
 import { HeadingCache, MarkdownView, TFile, htmlToMarkdown } from "obsidian";
 
@@ -33,30 +34,21 @@ export default class DynamicHeadings {
 
 	private _cleanupHeadings(headings: HeadingCache[]) {
 		const cleanMarkdown = (inputHeading: string) => {
-			return htmlToMarkdown(inputHeading)
-				.replaceAll("*", "")
-				.replaceAll("_", "")
-				.replaceAll("`", "")
-				.replaceAll("==", "")
-				.replaceAll("~~", "");
-		};
-		const extractLinkText = (inputHeading: string) => {
-			return (
-				inputHeading
-					// Extract markdown link [text](link) text
-					.replace(/\[([^\]]+)\]\(.*?\)/g, "$1")
-					// Extract wikilink [[link|text]] text
-					.replace(/\[\[([^\]]+)\|([^\]]+)\]\]/g, "$2")
-					// Extact another wikilink [[text]] text
-					.replace(/\[\[([^\]]+)\]\]/g, "$1")
-			);
+			// return htmlToMarkdown(inputHeading)
+			// 	.replaceAll("\\*", "")
+			// 	.replaceAll("\\_", "")
+			// 	.replaceAll("\\`", "")
+			// 	.replaceAll("\\<", "")
+			// 	.replaceAll("==", "")
+			// 	.replaceAll("~~", "");
+			return inputHeading.replaceAll(/\\([*`_<>])/g, "$1");
 		};
 
 		const cleanedHeadings: HeadingCache[] = headings;
 		cleanedHeadings.forEach((headingData) => {
 			let cleanedHeading: string = headingData.heading;
 			cleanedHeading = cleanMarkdown(cleanedHeading);
-			cleanedHeading = extractLinkText(cleanedHeading);
+			// cleanedHeading = extractLinkText(cleanedHeading);
 			headingData.heading = cleanedHeading;
 		});
 
